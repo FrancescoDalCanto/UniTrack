@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/e3rest/:path*",
+      "destination": "/api/esse3/:path*"
+    }
+  ]
+}

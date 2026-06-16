@@ -1,30 +1,100 @@
 # UniTrack
 
-App web per studenti dell'Università di Pisa che permette di visualizzare il libretto esami, monitorare i crediti acquisiti e calcolare la media in tempo reale, direttamente dal portale ESSE3 di UniPi.
+App personale per tracciare il libretto universitario, pensata per gli studenti dell'Università di Pisa. Si collega direttamente a ESSE3 e mostra media ponderata, base di laurea e avanzamento CFU in tempo reale.
+
+![UniTrack screenshot](src/assets/hero.png)
 
 ---
 
 ## Funzionalità
 
-- **Login sicuro** tramite credenziali del portale UniPi (Basic Auth su ESSE3)
-- **Libretto esami** con elenco degli esami superati e da sostenere
-- **Statistiche** in tempo reale:
-  - Media ponderata /30
-  - Proiezione base di laurea /110
-  - Conteggio esami superati
-- **Barra progresso CFU** rispetto al totale del corso (120 CFU)
-- **Aggiornamento manuale** del libretto con il pulsante "Aggiorna"
-- **Aggiunta/modifica/eliminazione esami** tramite modal (per simulare scenari futuri)
+- **Login con le credenziali ESSE3** (le stesse del portale studenti UniPi)
+- **Media ponderata** calcolata secondo il regolamento del Dipartimento di Informatica (30L vale 32, idoneità escluse)
+- **Base di laurea /110** (conversione diretta dalla media)
+- **Barra CFU** con avanzamento sul totale del corso
+- **Lista esami superati** ordinata per data
+- **Lista esami da sostenere** (collassabile)
 - **Sessione persistente** tramite `localStorage` — nessun login ad ogni avvio
 
 ---
 
 ## Stack tecnologico
 
-- [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- [Vite](https://vitejs.dev/) come build tool e dev server
-- [Tailwind CSS v4](https://tailwindcss.com/) per lo stile
-- API REST ESSE3 (CINECA) tramite proxy Vite
+- React 19 + TypeScript
+- Vite 8
+- Tailwind CSS 4
+- PWA con `vite-plugin-pwa` (installabile su desktop e mobile)
+- Proxy verso ESSE3 tramite Vite in locale e Vercel in produzione
+
+---
+
+## Installazione come app (PWA)
+
+L'app è installabile direttamente dal browser, senza passare da App Store o Play Store.
+
+### iPhone / iPad (Safari)
+
+1. Apri l'URL dell'app in Safari
+2. Tocca il tasto **Condividi** (rettangolo con freccia in su)
+3. Scorri e seleziona **"Aggiungi alla schermata Home"**
+4. Conferma con **Aggiungi**
+
+L'app si aprirà a schermo intero senza la barra di Safari.
+
+### Android (Chrome)
+
+1. Apri l'URL in Chrome
+2. Comparirà un banner **"Aggiungi a schermata Home"** — tocca **Installa**
+3. In alternativa: menu (⋮) → **"Installa app"**
+
+### Computer — Chrome / Edge
+
+1. Apri l'URL nel browser
+2. Clicca l'icona di installazione nella barra degli indirizzi (schermo con freccia)
+3. Clicca **"Installa"**
+
+L'app si aprirà in una finestra dedicata senza interfaccia del browser.
+
+### Computer — Safari (macOS)
+
+1. Apri l'URL in Safari
+2. Menu **File** → **"Aggiungi alla Dock"**
+
+---
+
+## Sviluppo locale
+
+```bash
+npm install
+npm run dev
+```
+
+L'app gira su `http://localhost:5173`. Il proxy Vite reindirizza automaticamente le chiamate verso `studenti.unipi.it`, quindi non serve configurazione aggiuntiva.
+
+---
+
+## Deploy su Vercel
+
+Il file `vercel.json` configura il proxy verso ESSE3:
+
+```json
+{
+  "rewrites": [
+    {
+      "source": "/e3rest/:path*",
+      "destination": "https://www.studenti.unipi.it/e3rest/:path*"
+    }
+  ]
+}
+```
+
+Per pubblicare:
+
+1. Carica il progetto su GitHub
+2. Vai su [vercel.com](https://vercel.com) e importa il repository
+3. Lascia le impostazioni di default e clicca **Deploy**
+
+Vercel assegna un URL pubblico con HTTPS, necessario per il funzionamento della PWA su mobile.
 
 ---
 
@@ -33,88 +103,36 @@ App web per studenti dell'Università di Pisa che permette di visualizzare il li
 ```
 src/
 ├── api.ts              # Chiamate API ESSE3 (login, libretto)
-├── App.tsx             # Componente principale
+├── App.tsx             # Componente principale e calcolo statistiche
 ├── main.tsx            # Entry point React
 ├── index.css           # Import Tailwind
 ├── types.ts            # Tipi TypeScript (Exam, StudentInfo, LibrettoRow)
 └── components/
     ├── LoginPage.tsx   # Pagina di accesso
     ├── ExamCard.tsx    # Card singolo esame
-    └── ExamModal.tsx   # Modal per aggiungere/modificare esami
+    └── ExamModal.tsx   # Modal dettaglio esame
 ```
 
 ---
 
-## Requisiti
+## Rigenera le icone PWA
 
-- Node.js 18+
-- npm 9+
-- Accesso alla rete UniPi (necessario per raggiungere il proxy ESSE3)
-
----
-
-## Installazione e avvio
+Se modifichi `public/pwa-icon.svg`, rigenera i PNG con:
 
 ```bash
-# Clona il repository
-git clone <url-repo>
-cd unitrack
-
-# Installa le dipendenze
-npm install
-
-# Avvia il dev server
-npm run dev
-```
-
-L'app sarà disponibile su `http://localhost:5173`.
-
----
-
-## Configurazione del proxy
-
-Il dev server Vite deve fare da proxy verso il portale ESSE3 di UniPi per evitare errori CORS. Assicurati che `vite.config.ts` contenga:
-
-```ts
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    proxy: {
-      '/e3rest': {
-        target: 'https://studenti.unipi.it',
-        changeOrigin: true,
-        secure: true,
-      },
-    },
-  },
-})
+npm run generate-pwa-assets
 ```
 
 ---
 
 ## Note sulla sicurezza
 
-- Le credenziali vengono usate esclusivamente per autenticarsi su ESSE3 e non vengono mai inviate a server di terze parti.
-- Il token di sessione (Basic Auth in Base64) viene salvato in `localStorage` per mantenere la sessione attiva tra i refresh. Per rimuoverlo è sufficiente fare logout dall'app.
-- L'app comunica direttamente con l'API ESSE3 di UniPi tramite il proxy locale — nessun backend intermedio.
+Le credenziali vengono usate esclusivamente per autenticarsi su ESSE3 e non vengono mai inviate a server di terze parti. Il token di sessione è memorizzato nel `localStorage` del browser — per rimuoverlo basta fare logout dall'app.
 
 ---
 
-## Limitazioni note
+## Limitazioni
 
-- Funziona solo con atenei che usano ESSE3/CINECA come sistema di gestione carriera. Testato su **Università di Pisa**.
-- Il totale CFU è impostato a **120** (laurea magistrale). Per corsi triennali modificare la costante `TOTAL_CFU` in `App.tsx`.
-- Le tasse e le prenotazioni esami non sono disponibili via API — i relativi portali UniPi (`studenti.unipi.it`, `esami.unipi.it`) non espongono endpoint REST accessibili dall'esterno.
-
----
-
-## Build per produzione
-
-```bash
-npm run build
-```
-
-L'output sarà nella cartella `dist/`. Da notare che in produzione il proxy Vite non è disponibile — sarà necessario configurare un reverse proxy (es. Nginx) che instradi `/e3rest` verso `studenti.unipi.it`.
+- Funziona con atenei che usano ESSE3/CINECA. Testato su **Università di Pisa, Dipartimento di Informatica**.
+- Il totale CFU è impostato a **120**. Per corsi diversi, modifica la costante `TOTAL_CFU` in `App.tsx`.
+- Il calcolo della media segue le regole del Dipartimento di Informatica UniPi. Per altri dipartimenti verificare il proprio regolamento.
