@@ -1,16 +1,38 @@
-export default async function handler(req, res) {
+const https = require('https')
+
+module.exports = async function handler(req, res) {
   const path = req.query.path ?? ''
-  const upstreamUrl = `https://www.studenti.unipi.it/e3rest/${path}`
+  const url = new URL(`https://www.studenti.unipi.it/e3rest/${path}`)
 
-  const headers = {}
-  if (req.headers.authorization) headers['authorization'] = req.headers.authorization
-
-  try {
-    const response = await fetch(upstreamUrl, { method: req.method, headers })
-    const contentType = response.headers.get('content-type')
-    if (contentType) res.setHeader('Content-Type', contentType)
-    res.status(response.status).send(await response.text())
-  } catch (err) {
-    res.status(502).json({ error: err.message })
+  const options = {
+    hostname: url.hostname,
+    path: url.pathname + url.search,
+    method: req.method,
+    headers: {},
   }
+
+  if (req.headers.authorization) {
+    options.headers['authorization'] = req.headers.authorization
+  }
+
+  return new Promise((resolve) => {
+    const request = https.request(options, (response) => {
+      let data = ''
+      response.on('data', (chunk) => { data += chunk })
+      response.on('end', () => {
+        if (response.headers['content-type']) {
+          res.setHeader('Content-Type', response.headers['content-type'])
+        }
+        res.status(response.statusCode).send(data)
+        resolve()
+      })
+    })
+
+    request.on('error', (err) => {
+      res.status(502).json({ error: err.message })
+      resolve()
+    })
+
+    request.end()
+  })
 }
