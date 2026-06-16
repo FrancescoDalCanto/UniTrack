@@ -1,6 +1,6 @@
 import type { StudentInfo, LibrettoRow } from './types'
 
-const BASE = '/e3rest/api'
+const BASE = import.meta.env.DEV ? '/e3rest/api' : '/api/esse3/api'
 
 function basicAuth(username: string, password: string) {
   return 'Basic ' + btoa(`${username}:${password}`)
