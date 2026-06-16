@@ -37,6 +37,14 @@ function rowToExam(row: LibrettoRow): Exam {
   }
 }
 
+function detectTotalCfu(cdsCod: string): number | null {
+  if (!cdsCod) return null
+  if (/-LMCU$/i.test(cdsCod)) return 300
+  if (/-LM$/i.test(cdsCod) || /-LM-/i.test(cdsCod)) return 120
+  if (/-L$/i.test(cdsCod) || /-L-/i.test(cdsCod)) return 180
+  return null
+}
+
 const STORAGE_KEY = 'unitrack-student'
 
 export default function App() {
@@ -56,7 +64,16 @@ export default function App() {
     setLoading(true)
     setError(null)
     fetchLibretto(s.matId, s.token)
-      .then(rows => setExams(rows.map(rowToExam)))
+      .then(rows => {
+        setExams(rows.map(rowToExam))
+        const cdsCod: string = (rows[0] as any)?.chiaveADContestualizzata?.cdsCod ?? ''
+        const totalCfu = detectTotalCfu(cdsCod)
+        if (totalCfu !== null && totalCfu !== s.totalCfu) {
+          const updated = { ...s, totalCfu }
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+          setStudent(updated)
+        }
+      })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }
