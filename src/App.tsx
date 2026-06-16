@@ -18,7 +18,7 @@ function rowToExam(row: LibrettoRow): Exam {
     (row as any).esito?.dataEsa ?? ''
   const cfu = (row as any).peso ?? row.cfuPeso ?? row.cfuPrevisti ?? 0
 
-  return {
+  return{
     id: String(row.adsId ?? (row as any).adId ?? (row as any).adsceId),
     name: row.adDes ?? (row as any).adCod ?? '',
     grade: passed ? grade : 0,
