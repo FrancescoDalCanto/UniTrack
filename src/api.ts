@@ -19,13 +19,24 @@ export async function login(username: string, password: string): Promise<Student
   const carriere: any[] = data.user?.trattiCarriera ?? []
   const career = carriere.find(c => c.staStuCod === 'A') ?? carriere[0] ?? {}
 
+  const cdsDes: string = career.cdsDes ?? ''
+  let totalCfu: number
+  if (/ciclo\s*unico/i.test(cdsDes)) {
+    totalCfu = /medicina\s+e\s+chirurgia|odontoiatria/i.test(cdsDes) ? 360 : 300
+  } else if (/magistrale/i.test(cdsDes)) {
+    totalCfu = 120
+  } else {
+    totalCfu = 180
+  }
+
   return {
     nome: data.user?.firstName ?? '',
     cognome: data.user?.lastName ?? '',
     matricola: career.matricola ?? data.user?.userId ?? '',
     matId: career.matId ?? 0,
-    corso: career.cdsDes ?? '',
+    corso: cdsDes,
     token: btoa(`${username}:${password}`),
+    totalCfu,
   }
 }
 

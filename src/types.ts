@@ -15,6 +15,7 @@ export interface StudentInfo {
   matId: number
   corso: string
   token: string
+  totalCfu: number
 }
 
 // Struttura grezza restituita dall'API ESSE3

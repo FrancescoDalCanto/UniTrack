@@ -4,7 +4,6 @@ import { fetchLibretto } from './api'
 import LoginPage from './components/LoginPage'
 import ExamCard from './components/ExamCard'
 
-const TOTAL_CFU = 120
 
 function parseEsse3Date(raw: string | null | undefined): string {
   if (!raw) return ''
@@ -79,6 +78,7 @@ export default function App() {
   const weightedSum = gradedExams.reduce((sum, e) => sum + (e.lode ? 32 : e.grade) * e.cfu, 0)
   const average = gradedCFU > 0 ? weightedSum / gradedCFU : null
   const projected110 = average !== null ? (average / 30) * 110 : null
+  const TOTAL_CFU = student?.totalCfu ?? 180
   const progress = Math.min((totalCFU / TOTAL_CFU) * 100, 100)
 
   const handleLogin = (s: StudentInfo) => {
@@ -103,9 +103,9 @@ export default function App() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Header */}
-      <div className="bg-indigo-600 text-white px-4 pt-12 pb-6">
+      <div className="bg-indigo-600 text-white px-4 pb-6" style={{ paddingTop: 'max(3rem, env(safe-area-inset-top))' }}>
         <div className="flex justify-between items-center mb-1">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">UniTrack</h1>
