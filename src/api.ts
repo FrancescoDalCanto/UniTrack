@@ -1,13 +1,15 @@
 import type { StudentInfo, LibrettoRow } from './types'
 
-const BASE = import.meta.env.DEV ? '/e3rest/api' : '/api/esse3/api'
-
 function basicAuth(username: string, password: string) {
   return 'Basic ' + btoa(`${username}:${password}`)
 }
 
+function esse3Url(path: string): string {
+  return import.meta.env.DEV ? `/e3rest/${path}` : `/api/esse3?path=${path}`
+}
+
 export async function login(username: string, password: string): Promise<StudentInfo> {
-  const res = await fetch(`${BASE}/login`, {
+  const res = await fetch(esse3Url('api/login'), {
     headers: { Authorization: basicAuth(username, password) },
   })
   if (res.status === 401) throw new Error('Credenziali non valide')
@@ -15,12 +17,7 @@ export async function login(username: string, password: string): Promise<Student
 
   const data = await res.json()
   const carriere: any[] = data.user?.trattiCarriera ?? []
-
-  // Prende la carriera attiva (staStuCod A), altrimenti la prima
-  const career =
-    carriere.find(c => c.staStuCod === 'A') ??
-    carriere[0] ??
-    {}
+  const career = carriere.find(c => c.staStuCod === 'A') ?? carriere[0] ?? {}
 
   return {
     nome: data.user?.firstName ?? '',
@@ -33,7 +30,7 @@ export async function login(username: string, password: string): Promise<Student
 }
 
 export async function fetchLibretto(matId: number, token: string): Promise<LibrettoRow[]> {
-  const res = await fetch(`${BASE}/libretto-service-v2/libretti/${matId}/righe`, {
+  const res = await fetch(esse3Url(`api/libretto-service-v2/libretti/${matId}/righe`), {
     headers: { Authorization: `Basic ${token}` },
   })
   if (!res.ok) throw new Error(`Errore nel recupero del libretto (${res.status})`)
