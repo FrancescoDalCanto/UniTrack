@@ -6,16 +6,25 @@ import ExamCard from './components/ExamCard'
 
 const TOTAL_CFU = 120
 
+function parseEsse3Date(raw: string | null | undefined): string {
+  if (!raw) return ''
+  // dd/MM/yyyy → yyyy-MM-dd
+  const ddmmyyyy = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})/)
+  if (ddmmyyyy) return `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`
+  return raw
+}
+
 function rowToExam(row: LibrettoRow): Exam {
   const statoValue = typeof row.stato === 'object' ? (row.stato as any).value : row.stato
   const voto = row.esito?.voto ?? null
   const passed = statoValue === 'S'
   const grade = typeof voto === 'string' ? parseInt(voto) : (voto ?? 0)
   const lode = ((row.esito as any)?.lodeFlg ?? 0) === 1
-  const date =
+  const rawDate =
     row.esito?.dataEsaSuperamento ??
     (row as any).esito?.dataAppSuperamento ??
     (row as any).esito?.dataEsa ?? ''
+  const date = parseEsse3Date(rawDate)
   const cfu = (row as any).peso ?? row.cfuPeso ?? row.cfuPrevisti ?? 0
 
   return{
@@ -62,9 +71,13 @@ export default function App() {
   const passedExams = exams.filter(e => !e.pending)
   const pendingExams = exams.filter(e => e.pending)
 
+  // Esami con voto numerico (≥18): usati per la media ponderata
+  const gradedExams = passedExams.filter(e => e.grade >= 18)
+
   const totalCFU = passedExams.reduce((sum, e) => sum + e.cfu, 0)
-  const weightedSum = passedExams.reduce((sum, e) => sum + e.grade * e.cfu, 0)
-  const average = totalCFU > 0 ? weightedSum / totalCFU : null
+  const gradedCFU = gradedExams.reduce((sum, e) => sum + e.cfu, 0)
+  const weightedSum = gradedExams.reduce((sum, e) => sum + (e.lode ? 32 : e.grade) * e.cfu, 0)
+  const average = gradedCFU > 0 ? weightedSum / gradedCFU : null
   const projected110 = average !== null ? (average / 30) * 110 : null
   const progress = Math.min((totalCFU / TOTAL_CFU) * 100, 100)
 

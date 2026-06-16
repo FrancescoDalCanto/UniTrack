@@ -11,11 +11,11 @@ export default function ExamCard({ exam }: Props) {
     exam.grade >= 24 ? 'text-yellow-600' :
     'text-orange-600'
 
-  const formattedDate = exam.date
-    ? new Date(exam.date).toLocaleDateString('it-IT', {
-        day: '2-digit', month: 'short', year: 'numeric',
-      })
-    : null
+  const dateObj = exam.date ? new Date(exam.date) : null
+  const formattedDate =
+    dateObj && !isNaN(dateObj.getTime())
+      ? dateObj.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
+      : null
 
   if (exam.pending) {
     return (
