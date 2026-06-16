@@ -51,7 +51,6 @@ export default function App() {
   const [exams, setExams] = useState<Exam[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showPending, setShowPending] = useState(false)
 
   const loadLibretto = (s: StudentInfo) => {
     setLoading(true)
@@ -68,7 +67,6 @@ export default function App() {
   }, [student])
 
   const passedExams = exams.filter(e => !e.pending)
-  const pendingExams = exams.filter(e => e.pending)
 
   // Esami con voto numerico (≥18): usati per la media ponderata
   const gradedExams = passedExams.filter(e => e.grade >= 18)
@@ -196,26 +194,7 @@ export default function App() {
               </div>
             )}
 
-            {pendingExams.length > 0 && (
-              <div>
-                <button
-                  onClick={() => setShowPending(p => !p)}
-                  className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1"
-                >
-                  Da sostenere ({pendingExams.length})
-                  <span className="text-gray-300">{showPending ? '▲' : '▼'}</span>
-                </button>
-                {showPending && (
-                  <div className="space-y-2">
-                    {pendingExams.map(exam => (
-                      <ExamCard key={exam.id} exam={exam} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {exams.length === 0 && (
+{exams.length === 0 && (
               <p className="text-center text-gray-400 text-sm mt-16">
                 Nessun esame trovato nel libretto.
               </p>

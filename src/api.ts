@@ -17,7 +17,7 @@ export async function login(username: string, password: string): Promise<Student
 
   const data = await res.json()
   const carriere: any[] = data.user?.trattiCarriera ?? []
-  console.log('CARRIERE:', JSON.stringify(carriere.map(c => ({ staStuCod: c.staStuCod, cdsDes: c.cdsDes, matId: c.matId })), null, 2))
+  console.log('CARRIERE (raw):', JSON.stringify(carriere, null, 2))
   const career = carriere.find(c => c.staStuCod === 'A') ?? carriere[0] ?? {}
 
   const cdsDes: string = career.cdsDes ?? ''
