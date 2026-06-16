@@ -11,7 +11,7 @@ export async function login(username: string, password: string): Promise<Student
     headers: { Authorization: basicAuth(username, password) },
   })
   if (res.status === 401) throw new Error('Credenziali non valide')
-  if (!res.ok) throw new Error('Errore del server ESSE3')
+  if (!res.ok) throw new Error(`Errore del server ESSE3 (${res.status})`)
 
   const data = await res.json()
   const carriere: any[] = data.user?.trattiCarriera ?? []
