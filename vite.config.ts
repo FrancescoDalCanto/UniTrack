@@ -2,11 +2,27 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { createRequire } from 'module'
+const _require = createRequire(import.meta.url)
+const { getTasse } = _require('./api/tasse.js')
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    {
+      name: 'tasse-dev',
+      configureServer(server) {
+        server.middlewares.use('/api/tasse', async (req: any, res: any) => {
+          const auth: string = req.headers.authorization ?? ''
+          if (!auth) { res.statusCode = 401; res.end(JSON.stringify({ error: 'No auth' })); return }
+          res.setHeader('Content-Type', 'application/json')
+          const result = await getTasse(auth)
+          if (result.debug) console.log('[tasse-dev] debug:', result.debug.slice(0, 500))
+          res.end(JSON.stringify(result))
+        })
+      },
+    },
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {

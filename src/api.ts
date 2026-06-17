@@ -1,4 +1,4 @@
-import type { StudentInfo, LibrettoRow } from './types'
+import type { StudentInfo, LibrettoRow, Tassa } from './types'
 
 function basicAuth(username: string, password: string) {
   return 'Basic ' + btoa(`${username}:${password}`)
@@ -20,9 +20,16 @@ export async function login(username: string, password: string): Promise<Student
   console.log('CARRIERE (raw):', JSON.stringify(carriere, null, 2))
   const career = carriere.find(c => c.staStuCod === 'A') ?? carriere[0] ?? {}
 
+  const cdsCod: string = career.cdsCod ?? ''
   const cdsDes: string = career.cdsDes ?? ''
   let totalCfu: number
-  if (/ciclo\s*unico/i.test(cdsDes)) {
+  if (/-LMCU$/i.test(cdsCod)) {
+    totalCfu = /medicina\s+e\s+chirurgia|odontoiatria/i.test(cdsDes) ? 360 : 300
+  } else if (/-LM$/i.test(cdsCod) || /-LM-/i.test(cdsCod)) {
+    totalCfu = 120
+  } else if (/-L$/i.test(cdsCod) || /-L-/i.test(cdsCod)) {
+    totalCfu = 180
+  } else if (/ciclo\s*unico/i.test(cdsDes)) {
     totalCfu = /medicina\s+e\s+chirurgia|odontoiatria/i.test(cdsDes) ? 360 : 300
   } else if (/magistrale/i.test(cdsDes)) {
     totalCfu = 120
@@ -39,6 +46,16 @@ export async function login(username: string, password: string): Promise<Student
     token: btoa(`${username}:${password}`),
     totalCfu,
   }
+}
+
+
+export async function fetchTasse(token: string): Promise<Tassa[]> {
+  const res = await fetch('/api/tasse', { headers: { Authorization: `Basic ${token}` } })
+  if (!res.ok) { console.warn('Tasse non disponibile:', res.status); return [] }
+  const data = await res.json()
+  if (data.debug) console.log('Tasse debug:', data.debug)
+  if (data.error) { console.warn('Tasse error:', data.error); return [] }
+  return data.fatture ?? []
 }
 
 export async function fetchLibretto(matId: number, token: string): Promise<LibrettoRow[]> {

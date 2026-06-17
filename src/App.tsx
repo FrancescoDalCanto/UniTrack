@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import type { Exam, StudentInfo, LibrettoRow } from './types'
-import { fetchLibretto } from './api'
+import type { Exam, StudentInfo, LibrettoRow, Tassa } from './types'
+import { fetchLibretto, fetchTasse } from './api'
 import LoginPage from './components/LoginPage'
 import ExamCard from './components/ExamCard'
 
@@ -37,9 +37,11 @@ function rowToExam(row: LibrettoRow): Exam {
   }
 }
 
-function detectTotalCfu(cdsCod: string): number | null {
+function detectTotalCfu(cdsCod: string, cdsDes?: string): number | null {
   if (!cdsCod) return null
-  if (/-LMCU$/i.test(cdsCod)) return 300
+  if (/-LMCU$/i.test(cdsCod)) {
+    return cdsDes && /medicina\s+e\s+chirurgia|odontoiatria/i.test(cdsDes) ? 360 : 300
+  }
   if (/-LM$/i.test(cdsCod) || /-LM-/i.test(cdsCod)) return 120
   if (/-L$/i.test(cdsCod) || /-L-/i.test(cdsCod)) return 180
   return null
@@ -57,17 +59,19 @@ export default function App() {
     }
   })
   const [exams, setExams] = useState<Exam[]>([])
+  const [tasse, setTasse] = useState<Tassa[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const loadLibretto = (s: StudentInfo) => {
     setLoading(true)
     setError(null)
-    fetchLibretto(s.matId, s.token)
-      .then(rows => {
+    Promise.all([fetchLibretto(s.matId, s.token), fetchTasse(s.token)])
+      .then(([rows, tasseData]) => {
         setExams(rows.map(rowToExam))
+        setTasse(tasseData)
         const cdsCod: string = (rows[0] as any)?.chiaveADContestualizzata?.cdsCod ?? ''
-        const totalCfu = detectTotalCfu(cdsCod)
+        const totalCfu = detectTotalCfu(cdsCod, s.corso)
         if (totalCfu !== null && totalCfu !== s.totalCfu) {
           const updated = { ...s, totalCfu }
           localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
@@ -111,14 +115,18 @@ export default function App() {
     if (student) loadLibretto(student)
   }
 
+  const [tab, setTab] = useState<'esami' | 'tasse' | 'dafare'>('esami')
+
   if (!student) return <LoginPage onLogin={handleLogin} />
+
+  const pendingExams = exams.filter(e => e.pending)
 
   const sortedPassed = [...passedExams].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   )
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
       <div className="bg-indigo-600 text-white px-4 pb-6" style={{ paddingTop: 'max(3rem, env(safe-area-inset-top))' }}>
         <div className="flex justify-between items-center mb-1">
@@ -185,39 +193,71 @@ export default function App() {
       </div>
 
       {/* Content */}
-      <div className="px-4 py-5 space-y-5">
+      <div className="px-4 py-5 space-y-2">
         {loading && (
-          <p className="text-center text-gray-400 text-sm py-8">Caricamento libretto…</p>
+          <p className="text-center text-gray-400 text-sm py-8">Caricamento…</p>
         )}
-
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
             {error}
           </div>
         )}
 
-        {!loading && !error && (
-          <>
-            {sortedPassed.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                  Superati ({passedExams.length})
-                </p>
-                <div className="space-y-2">
-                  {sortedPassed.map(exam => (
-                    <ExamCard key={exam.id} exam={exam} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-{exams.length === 0 && (
-              <p className="text-center text-gray-400 text-sm mt-16">
-                Nessun esame trovato nel libretto.
-              </p>
-            )}
-          </>
+        {!loading && !error && tab === 'esami' && (
+          sortedPassed.length > 0
+            ? sortedPassed.map(exam => <ExamCard key={exam.id} exam={exam} />)
+            : <p className="text-center text-gray-400 text-sm mt-16">Nessun esame superato.</p>
         )}
+
+        {!loading && !error && tab === 'tasse' && (
+          tasse.length > 0
+            ? tasse.map((t, i) => (
+                <div key={i} className={`bg-white rounded-xl px-4 py-3 shadow-sm flex items-center justify-between ${t.pagata ? 'opacity-40' : ''}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{t.descrizione || `Rata ${t.anno}`}</p>
+                    <p className={`text-xs font-medium mt-0.5 ${t.pagata ? 'text-green-500' : 'text-red-400'}`}>
+                      {t.pagata ? 'Pagata' : t.scadenza ? `Scadenza: ${t.scadenza}` : 'Da pagare'}
+                    </p>
+                  </div>
+                  {t.importo && (
+                    <span className={`text-sm font-semibold ml-4 shrink-0 ${t.pagata ? 'text-gray-400' : 'text-red-500'}`}>
+                      {t.importo}
+                    </span>
+                  )}
+                </div>
+              ))
+            : <p className="text-center text-gray-400 text-sm mt-16">Nessuna tassa trovata.</p>
+        )}
+
+        {!loading && !error && tab === 'dafare' && (
+          pendingExams.length > 0
+            ? pendingExams.map(exam => <ExamCard key={exam.id} exam={exam} />)
+            : <p className="text-center text-gray-400 text-sm mt-16">Nessun esame da sostenere.</p>
+        )}
+      </div>
+
+      {/* Tab bar */}
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {([
+          { id: 'esami', label: 'Esami', count: passedExams.length },
+          { id: 'tasse', label: 'Tasse', count: tasse.length },
+          { id: 'dafare', label: 'Da dare', count: pendingExams.length },
+        ] as const).map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs font-medium transition-colors ${
+              tab === t.id ? 'text-indigo-600' : 'text-gray-400'
+            }`}
+          >
+            <span className="text-base font-bold">{t.count}</span>
+            <span>{t.label}</span>
+            {tab === t.id && <span className="absolute bottom-0 w-12 h-0.5 bg-indigo-600 rounded-full" />}
+          </button>
+        ))}
       </div>
     </div>
   )

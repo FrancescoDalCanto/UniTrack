@@ -18,6 +18,14 @@ export interface StudentInfo {
   totalCfu: number
 }
 
+export interface Tassa {
+  descrizione: string
+  anno: string
+  importo: string
+  scadenza: string
+  pagata: boolean
+}
+
 // Struttura grezza restituita dall'API ESSE3
 export interface LibrettoRow {
   adsId: number
